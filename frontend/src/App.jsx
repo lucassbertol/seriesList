@@ -1,122 +1,91 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect } from 'react';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Estados para gerenciar as séries e o formulário
+  const [series, setSeries] = useState([]);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+
+  // Buscar as séries no backend assim que a tela carregar (GET)
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/api/series/')
+      .then((response) => response.json())
+      .then((data) => setSeries(data))
+      .catch((error) => console.error("Erro ao carregar séries:", error));
+  }, []);
+
+  // Função para enviar uma nova série para o backend (POST)
+  const handleSubmit = (e) => {
+    e.preventDefault(); // Evita que a página recarregue ao enviar o form
+
+    const newSeries = { title, description };
+
+    fetch('http://127.0.0.1:8000/api/series/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newSeries),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        // Atualiza a lista na tela de forma instantânea com a nova série
+        setSeries([...series, data]);
+        // Limpa os campos do formulário
+        setTitle('');
+        setDescription('');
+      })
+      .catch((error) => console.error("Erro ao adicionar série:", error));
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      <h1>seriesList</h1>
+
+      {/* FORMULÁRIO*/}
+      <section style={{ margin: '40px 0', padding: '20px', background: '#2c2c2c', borderRadius: '8px' }}>
+        <h2>Adicionar Nova Série</h2>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          <input
+            type="text"
+            placeholder="Título da Série"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            style={{ padding: '10px', borderRadius: '5px' }}
+          />
+          <textarea
+            placeholder="Descrição da Série (Opcional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows="3"
+            style={{ padding: '10px', borderRadius: '5px' }}
+          />
+          <button type="submit" style={{ padding: '10px', cursor: 'pointer', background: '#646cff' }}>
+            Adicionar na Lista
+          </button>
+        </form>
       </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
+      {/* LISTAGEM DAS SÉRIES*/}
+      <section>
+        <h2>Séries Cadastradas</h2>
+        {series.length === 0 ? (
+          <p>Nenhuma série no backlog ainda. Que tal adicionar a primeira?</p>
+        ) : (
+          <ul style={{ listStyle: 'none', padding: 0 }}>
+            {series.map((item) => (
+              <li key={item.id} style={{ border: '1px solid #444', marginBottom: '10px', padding: '15px', borderRadius: '8px', textAlign: 'left' }}>
+                <h3 style={{ margin: '0 0 10px 0', color: '#646cff' }}>{item.title}</h3>
+                <p style={{ margin: 0 }}>{item.description || "Sem descrição."}</p>
+              </li>
+            ))}
           </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
+        )}
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
