@@ -2,15 +2,19 @@ import { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
-  // Estados para gerenciar as séries e o formulário
   const [series, setSeries] = useState([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState('ongoing'); // Status padrão para backlog
-  const [grade, setGrade] = useState(''); // Nota opcional
-  const [dateEnded, setDateEnded] = useState(''); // Data de término opcional
+  const [tmdbId, setTmdbId] = useState(null);
+  const [status, setStatus] = useState('ongoing');
+  const [grade, setGrade] = useState('');
+  const [dateEnded, setDateEnded] = useState('');
+  
+  // estado para resultados de busca
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Buscar as séries no backend assim que a tela carregar (GET)
+  // Buscar séries do banco local
   useEffect(() => {
     fetch('http://127.0.0.1:8000/api/series/')
       .then((response) => response.json())
@@ -18,16 +22,40 @@ function App() {
       .catch((error) => console.error("Erro ao carregar séries:", error));
   }, []);
 
-  // Função para enviar uma nova série para o backend (POST)
+  // buscar séries da TMDB enquanto digita
+  const handleSearchTMDB = (query) => {
+    setSearchQuery(query);
+    
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    fetch(`http://127.0.0.1:8000/api/series/search-tmdb/?q=${query}`)
+      .then((response) => response.json())
+      .then((data) => setSearchResults(data))
+      .catch((error) => console.error("Erro na busca:", error));
+  };
+
+  // selecionar série da TMDB
+  const handleSelectSeries = (item) => {
+    setTitle(item.title);
+    setDescription(item.description);
+    setTmdbId(item.tmdb_id);
+    setSearchResults([]);
+    setSearchQuery('');
+  };
+
   const handleSubmit = (e) => {
-    e.preventDefault(); // Evita que a página recarregue ao enviar o form
+    e.preventDefault();
 
     const newSeries = { 
+      tmdb_id: tmdbId,
       title, 
       description,
       status,
-      grade: grade ? parseFloat(grade) : 0.0, // Converte a string do input para número decimal (float)
-      dateEnded: dateEnded || null  // null se a data estiver vazia
+      grade: grade ? parseFloat(grade) : 0.0,
+      dateEnded: dateEnded || null  
     };
 
     fetch('http://127.0.0.1:8000/api/series/', {
@@ -38,30 +66,25 @@ function App() {
       body: JSON.stringify(newSeries),
     })
       .then((response) => {
-        if (!response.ok) {
-           throw new Error("Erro na API.");
-        }
+        if (!response.ok) throw new Error("Erro na API.");
         return response.json();
       })
       .then((data) => {
-        // Atualiza a lista na tela de forma instantânea com a nova série
         setSeries([...series, data]);
-        // Limpa os campos do formulário
         setTitle('');
         setDescription('');
+        setTmdbId(null);
         setGrade('');
         setDateEnded('');
       })
       .catch((error) => console.error("Erro ao adicionar série:", error));
-  }; // Fim da handleSubmit
+  };
 
-  // Função para excluir do backend e atualizar tela (DELETE)
   const handleDelete = (id) => {
     fetch(`http://127.0.0.1:8000/api/series/${id}/`, {
       method: 'DELETE',
     })
       .then(() => {
-        // Remove a série da lista localmente após a exclusão
         setSeries(series.filter((item) => item.id !== id));
       })
       .catch((error) => console.error("Erro ao excluir série:", error));
@@ -71,10 +94,45 @@ function App() {
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
       <h1>seriesList</h1>
 
-      {/* FORMULÁRIO*/}
       <section style={{ margin: '40px 0', padding: '20px', background: '#2c2c2c', borderRadius: '8px' }}>
         <h2>Adicionar Nova Série</h2>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          
+          {/* Novo: campo de busca TMDB */}
+          <div>
+            <input
+              type="text"
+              placeholder="Buscar série no TMDB..."
+              value={searchQuery}
+              onChange={(e) => handleSearchTMDB(e.target.value)}
+              style={{ padding: '10px', borderRadius: '5px', width: '100%' }}
+            />
+            {searchResults.length > 0 && (
+              <ul style={{ 
+                listStyle: 'none', 
+                padding: '10px', 
+                background: '#1a1a1a', 
+                marginTop: '5px',
+                borderRadius: '5px'
+              }}>
+                {searchResults.map((item) => (
+                  <li 
+                    key={item.tmdb_id}
+                    onClick={() => handleSelectSeries(item)}
+                    style={{
+                      padding: '8px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #444',
+                      hover: { background: '#333' }
+                    }}
+                  >
+                    <strong>{item.title}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           <input
             type="text"
             placeholder="Título da Série"
@@ -82,13 +140,15 @@ function App() {
             onChange={(e) => setTitle(e.target.value)}
             required
             style={{ padding: '10px', borderRadius: '5px' }}
+            disabled={tmdbId ? true : false}
           />
           <textarea
-            placeholder="Descrição da Série (Opcional)"
+            placeholder="Descrição da Série"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             rows="3"
             style={{ padding: '10px', borderRadius: '5px' }}
+            disabled={tmdbId ? true : false}
           />
           <select
             value={status}
@@ -123,19 +183,16 @@ function App() {
         </form>
       </section>
 
-      {/* LISTAGEM DAS SÉRIES*/}
       <section>
         <h2>Séries Cadastradas</h2>
         {series.length === 0 ? (
-          <p>Nenhuma série no backlog ainda. Que tal adicionar a primeira?</p>
+          <p>Nenhuma série no backlog ainda.</p>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {series.map((item) => (
-              <li key={item.id} style={{ border: '1px solid #444', marginBottom: '10px', padding: '15px', borderRadius: '8px', textAlign: 'left' }}>
+              <li key={item.id} style={{ border: '1px solid #444', marginBottom: '10px', padding: '15px', borderRadius: '8px' }}>
                 <h3 style={{ margin: '0 0 10px 0', color: '#646cff' }}>{item.title}</h3>
                 <p style={{ margin: 0 }}>{item.description || "Sem descrição."}</p>
-                
-                {/* deletar series */}
                 <button onClick={() => handleDelete(item.id)} style={{ marginTop: '10px', padding: '5px 10px', cursor: 'pointer', background: '#ff6464' }}>
                   Remover série
                 </button>
@@ -149,4 +206,3 @@ function App() {
 }
 
 export default App;
-

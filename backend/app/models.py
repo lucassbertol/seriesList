@@ -3,6 +3,7 @@ from django.db import models
 # Create your models here.
 
 class Series(models.Model):
+    tmdb_id = models.IntegerField(unique=True, null=True, blank=True)
     title = models.CharField(max_length=100)
     description = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=20, default='ongoing')
