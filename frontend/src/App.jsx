@@ -16,19 +16,23 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Buscar séries do banco local
-useEffect(() => {
-  fetch("http://127.0.0.1:8000/api/series/")
-    .then((response) => response.json())
-    .then((data) => {
-      // Separa as séries por collection_type
-      const backlogSeries = data.filter(s => s.collection_type === 'backlog');
-      const watchLaterSeries = data.filter(s => s.collection_type === 'watchLater');
-      
-      setSeries(backlogSeries);
-      setWatchLater(watchLaterSeries);
-    })
-    .catch((error) => console.error("Erro ao carregar séries:", error));
-}, []);
+  useEffect(() => {
+    fetch("http://127.0.0.1:8000/api/series/")
+      .then((response) => response.json())
+      .then((data) => {
+        // Separa as séries por collection_type
+        const backlogSeries = data.filter(
+          (s) => s.collection_type === "backlog",
+        );
+        const watchLaterSeries = data.filter(
+          (s) => s.collection_type === "watchLater",
+        );
+
+        setSeries(backlogSeries);
+        setWatchLater(watchLaterSeries);
+      })
+      .catch((error) => console.error("Erro ao carregar séries:", error));
+  }, []);
 
   // buscar séries da TMDB enquanto digita
   const handleSearchTMDB = (query) => {
@@ -55,53 +59,53 @@ useEffect(() => {
     setSearchQuery("");
   };
 
-const handleSubmit = (e) => {
-  e.preventDefault();
+  const handleSubmit = (e) => {
+    e.preventDefault();
 
-  const newSeries = {
-    tmdb_id: tmdbId,
-    title,
-    poster_path: posterPath,
-    collection_type: activeTab,
+    const newSeries = {
+      tmdb_id: tmdbId,
+      title,
+      description,
+      poster_path: posterPath,
+      collection_type: activeTab,
+    };
+
+    // Se for backlog, adiciona os campos extras
+    if (activeTab === "backlog") {
+      newSeries.status = status;
+      newSeries.grade = grade ? parseFloat(grade) : 0.0;
+      newSeries.dateEnded = dateEnded || null;
+    }
+
+    fetch("http://127.0.0.1:8000/api/series/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newSeries),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error("Erro na API.");
+        return response.json();
+      })
+      .then((data) => {
+        // Adiciona na aba correta
+        if (activeTab === "backlog") {
+          setSeries([...series, data]);
+        } else {
+          setWatchLater([...watchLater, data]);
+        }
+        // Limpa o formulário
+        setTitle("");
+        setDescription("");
+        setPosterPath("");
+        setTmdbId(null);
+        setGrade("");
+        setDateEnded("");
+        setSearchQuery("");
+      })
+      .catch((error) => console.error("Erro ao adicionar série:", error));
   };
-
-  // Se for backlog, adiciona os campos extras
-  if (activeTab === "backlog") {
-    newSeries.description = description;
-    newSeries.status = status;
-    newSeries.grade = grade ? parseFloat(grade) : 0.0;
-    newSeries.dateEnded = dateEnded || null;
-  }
-
-  fetch("http://127.0.0.1:8000/api/series/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(newSeries),
-  })
-    .then((response) => {
-      if (!response.ok) throw new Error("Erro na API.");
-      return response.json();
-    })
-    .then((data) => {
-      // Adiciona na aba correta
-      if (activeTab === "backlog") {
-        setSeries([...series, data]);
-      } else {
-        setWatchLater([...watchLater, data]);
-      }
-      // Limpa o formulário
-      setTitle("");
-      setDescription("");
-      setPosterPath("");
-      setTmdbId(null);
-      setGrade("");
-      setDateEnded("");
-      setSearchQuery("");
-    })
-    .catch((error) => console.error("Erro ao adicionar série:", error));
-};
 
   const handleDelete = (id) => {
     fetch(`http://127.0.0.1:8000/api/series/${id}/`, {
@@ -159,7 +163,10 @@ const handleSubmit = (e) => {
 
         {/* Formulário */}
         <section className="form-section">
-          <h2>+ Adicionar Nova Série ao {activeTab === "backlog" ? "backlog" : "Watch Later"}</h2>
+          <h2>
+            + Adicionar Nova Série ao{" "}
+            {activeTab === "backlog" ? "backlog" : "Watch Later"}
+          </h2>
 
           <form onSubmit={handleSubmit} className="form">
             {/* Busca TMDB */}
@@ -266,12 +273,16 @@ const handleSubmit = (e) => {
         {/* Lista de Séries */}
         <section className="series-section">
           <h2>
-            {activeTab === "backlog" ? "Seu Backlog" : "Watch Later"} ({currentSeriesList.length})
+            {activeTab === "backlog" ? "Seu Backlog" : "Watch Later"} (
+            {currentSeriesList.length})
           </h2>
 
           {currentSeriesList.length === 0 ? (
             <div className="empty-state">
-              <p>Nenhuma série nesta aba ainda. Adicione sua primeira série acima!</p>
+              <p>
+                Nenhuma série nesta aba ainda. Adicione sua primeira série
+                acima!
+              </p>
             </div>
           ) : (
             <div className="series-grid">
