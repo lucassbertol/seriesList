@@ -30,3 +30,42 @@
 
 - 📺 **Series backlog** — add series you want to watch and organize them
 - ⭐ **Ratings system** — rate completed series to
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/lucassbertol/wachlog
+cd watchLOG
+```
+
+### 2. Install dependencies
+
+```bash
+# Install python dependencies
+cd backend
+pip install -r requirements.txt
+
+# Install node.js dependencies
+cd frontend
+npm install
+```
+
+### 3. Run the server
+
+```bash
+# Run backend
+cd backend
+python manage.py migrate
+python manage.py runserver
+
+# Run frontend
+npm run dev
+```
+
+The application will be available at `http://localhost:5173/`.
