@@ -65,6 +65,7 @@ python manage.py migrate
 python manage.py runserver
 
 # Run frontend
+cd frontend
 npm run dev
 ```
 
